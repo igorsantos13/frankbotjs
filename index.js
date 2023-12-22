@@ -1,27 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 // Require the necessary discord.js classes
-const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection } = require('discord.js');
 require('dotenv').config();
 const token = process.env.TOKEN;
 
 // Create a new client instance
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// When the client is ready, run this code (only once).
-// The distinction between `client: Client<boolean>` and `readyClient: Client<true>` is important for TypeScript developers.
-// It makes some properties non-nullable.
-client.once(Events.ClientReady, readyClient => {
-	console.log(`Ready! Logged in as ${readyClient.user.tag}`);
-});
-
-
-// Log in to Discord with your client's token
-client.login(token);
-
 client.commands = new Collection();
-
-const foldersPath = path.joins(__dirname, 'commands');
+const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
 
 for (const folder of commandFolders) {
@@ -41,3 +29,19 @@ for (const folder of commandFolders) {
 	}
 
 }
+
+const eventsPath = path.join(__dirname, 'events');
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+
+for (const file of eventFiles) {
+	const filePath = path.join(eventsPath, file);
+	const event = require(filePath);
+	if (event.once) {
+		client.once(event.name, (...args) => event.execute(...args));
+	}
+	else {
+		client.on(event.name, (...args) => event.execute(...args));
+	}
+}
+// Log in to Discord with your client's token
+client.login(token);
